@@ -8,16 +8,24 @@ import (
 )
 
 type Quiz struct {
-	Results   map[int]bool
+	Results   map[bool]int
 	Questions []*Question
 }
 
 func NewQuiz() *Quiz {
-	return &Quiz{Results: make(map[int]bool)}
+	return &Quiz{Results: make(map[bool]int)}
 }
 
 func (q *Quiz) InsertQuestion(ques *Question) {
 	q.Questions = append(q.Questions, ques)
+}
+
+func (q *Quiz) RegisterResponse(ques *Question, ans string) {
+	if ok := ques.matchAnswer(ans); ok {
+		q.Results[true] += 1
+	} else {
+		q.Results[false] += 1
+	}
 }
 
 type Question struct {
@@ -47,11 +55,6 @@ func main() {
 	if err != nil {
 		fmt.Println("cannot open file. ", err)
 	}
-	// file.Read(b)
-
-	// if err != nil {
-	// 	fmt.Println("err: ", err)
-	// }
 
 	quiz := NewQuiz()
 
@@ -70,5 +73,12 @@ func main() {
 
 	}
 
-	fmt.Println(quiz)
+	for _, q := range quiz.Questions {
+		var ans string
+		fmt.Printf("What is %s? :", q.q)
+		fmt.Scanf("%s", &ans)
+		quiz.RegisterResponse(q, ans)
+	}
+
+	fmt.Printf("You answered %d correct out of %d\n", quiz.Results[true], quiz.Results[true]+quiz.Results[false])
 }
