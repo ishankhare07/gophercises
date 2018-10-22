@@ -2,9 +2,11 @@ package main
 
 import (
 	"encoding/csv"
+	"flag"
 	"fmt"
 	"io"
 	"os"
+	"time"
 )
 
 type Quiz struct {
@@ -49,7 +51,16 @@ func (q *Question) matchAnswer(answer string) bool {
 	}
 }
 
+func answerInput(answerChan chan<- string) {
+	var ans string
+	fmt.Scanf("%s", &ans)
+	answerChan <- ans
+}
+
 func main() {
+	timeLimit := flag.Int("limit", 30, "time limit in seconds")
+	flag.Parse()
+
 	file, err := os.Open("problems.csv")
 
 	if err != nil {
@@ -73,12 +84,24 @@ func main() {
 
 	}
 
+	timer := time.NewTimer(time.Duration(*timeLimit) * time.Second)
+
 	for _, q := range quiz.Questions {
-		var ans string
 		fmt.Printf("What is %s? :", q.q)
-		fmt.Scanf("%s", &ans)
-		quiz.RegisterResponse(q, ans)
+
+		answerChan := make(chan string)
+
+		go answerInput(answerChan)
+
+		select {
+		case <-timer.C:
+			fmt.Printf("\nYou answered %d correct out of %d\n", quiz.Results[true], len(quiz.Questions))
+			return
+		case ans := <-answerChan:
+			quiz.RegisterResponse(q, ans)
+
+		}
 	}
 
-	fmt.Printf("You answered %d correct out of %d\n", quiz.Results[true], quiz.Results[true]+quiz.Results[false])
+	fmt.Printf("You answered %d correct out of %d\n", quiz.Results[true], len(quiz.Questions))
 }
